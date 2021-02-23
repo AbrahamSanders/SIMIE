@@ -79,7 +79,7 @@ def generate(args, model, device, tokenizer, dialog_history, user_input=None, pr
         dialog_history.pop(0)
         
     model_input_ids = model_input_ids.to(device)
-    print(model_input)
+    
     #Generate the result
     #TODO: verify that increasing temperature proportionally to input length
     #      actually does help the model avoid repetition loops.
