@@ -46,6 +46,11 @@ def main():
         user_input = input(">> User: ")
         if user_input == "exit":
             break
+        if user_input == "--reset":
+            dialog_history.clear()
+            print("Dialog history cleared.")
+            print()
+            continue
         
         if bool(np.random.binomial(1, args.prompt_narrative_prob)):
             generate(args, model, device, tokenizer, dialog_history, user_input, prompt_narrative=True)
@@ -90,7 +95,7 @@ def generate(args, model, device, tokenizer, dialog_history, user_input=None, pr
                                 top_k=50,
                                 top_p=0.95,
                                 do_sample=True,
-                                temperature=1.5 + 0.002 * model_input_ids.shape[-1],
+                                temperature=1.5 + 0.003 * model_input_ids.shape[-1],
                                 num_beams=6,
                                 early_stopping=True,
                                 num_return_sequences=1)
