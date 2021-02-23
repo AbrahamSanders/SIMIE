@@ -4,12 +4,17 @@ Script for interacting with the generator model via the terminal.
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 import argparse
+import numpy as np
+
+from interact_helpers import preprocess_input, postprocess_output
 
 def main():
     # load the args & config
     parser = argparse.ArgumentParser("Interact with the generator model")
-    parser.add_argument("--modelpath", default="output/checkpoint-7000", required=False, help="Path to the Huggingface Transformers GPT-2 model to load.")
+    parser.add_argument("--modelpath", default="output/checkpoint-21000", required=False, help="Path to the Huggingface Transformers GPT-2 model to load.")
     parser.add_argument("--force-cpu", action="store_true", required=False, help="Force the device to cpu even if a supported GPU is present.")
+    parser.add_argument("--prompt-narrative-prob", type=float, default=0.3, required=False, help="Probability that the model will get prompted to generate narrative at each turn.")
+    parser.add_argument("--max-input-tokens", type=int, default=512, required=False, help="Maximum number of tokens to use as input. Dialog history gets trimmed from the back to accommodate this.")
     # TODO: support a larger set of options such as setting inference hyperparams.
     # Also support a user menu to set most of these options during runtime, like
     # https://github.com/AbrahamSanders/seq2seq-chatbot/blob/master/seq2seq-chatbot/chat_command_handler.py
@@ -25,8 +30,6 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(args.modelpath)
     model = AutoModelForCausalLM.from_pretrained(args.modelpath)
     
-    narrative_token, dialog_token = tokenizer.additional_special_tokens
-    
     if args.force_cpu:
         device = torch.device("cpu")
     else:    
@@ -38,57 +41,77 @@ def main():
     model.eval()
     
     #Start the interaction loop
-    turn_counter = 0
-    post_token = dialog_token
     dialog_history = []
     while True:
-        if post_token == dialog_token:
-            user_input = input(">> User: ")
-            turn_counter += 1
-            if user_input == "exit":
-                break
+        user_input = input(">> User: ")
+        if user_input == "exit":
+            break
         
-        #Add last input to the dialog history and concatenate to create model input
-        if turn_counter % 3 == 0 and post_token == dialog_token:
-            post_token = narrative_token
-        else:
-            post_token = dialog_token
-        dialog_history.append(dialog_token + user_input + tokenizer.eos_token + post_token)
+        if bool(np.random.binomial(1, args.prompt_narrative_prob)):
+            generate(args, model, device, tokenizer, dialog_history, user_input, prompt_narrative=True)
+            generate(args, model, device, tokenizer, dialog_history, prompt_dialog=True)
+        else:    
+            generate(args, model, device, tokenizer, dialog_history, user_input)
+        
+        
+def generate(args, model, device, tokenizer, dialog_history, user_input=None, prompt_narrative=False, prompt_dialog=False):
+    if prompt_narrative and prompt_dialog:
+        raise ValueError("One of prompt_narrative or prompt_dialog may be true, not both.")
+    has_continuation_prompt = prompt_narrative or prompt_dialog
+        
+    narrative_token, dialog_token = tokenizer.additional_special_tokens
+    
+    #If provided, preprocess user input and add to the dialog history
+    if user_input is not None:
+        processed_input = preprocess_input(user_input, narrative_token, 
+                                           dialog_token, tokenizer.eos_token)
+        dialog_history.append(processed_input)
+    
+    #Tokenize the model input, trimming the dialog history to stay below the maximum length.
+    while True:
         model_input = "".join(dialog_history)
+        if has_continuation_prompt:
+            model_input += narrative_token if prompt_narrative else dialog_token
         
-        #Tokenize the model input
         model_input_ids = tokenizer.encode(model_input, return_tensors="pt")
-        model_input_ids = model_input_ids.to(device)
+        if model_input_ids.shape[-1] <= args.max_input_tokens:
+            break
+        dialog_history.pop(0)
         
-        #Generate the result
-        #TODO: verify that increasing temperature proportionally to input length
-        #      actually does help the model avoid repetition loops.
-        result_ids = model.generate(model_input_ids,
-                                    max_length=tokenizer.model_max_length,
-                                    pad_token_id=tokenizer.pad_token_id,
-                                    length_penalty=0.1,
-                                    top_k=50,
-                                    top_p=0.95,
-                                    do_sample=True,
-                                    temperature=1.5 + 0.005 * model_input_ids.shape[1],
-                                    num_beams=6,
-                                    early_stopping=True,
-                                    num_return_sequences=1)
-        
-        result_ids = result_ids.to("cpu")
-        
-        #Print the result(s)
-        for i in range(result_ids.shape[0]):
-            generated_text = tokenizer.decode(result_ids[:, model_input_ids.shape[-1]:][i], 
-                                              skip_special_tokens=True)
-            if i == 0:
-                dialog_history.append(generated_text)
-                
-            if post_token == narrative_token:
-                generated_text = "***{}***".format(generated_text)
-            print("Generator: {}".format(generated_text))
-            print()
-
+    model_input_ids = model_input_ids.to(device)
+    print(model_input)
+    #Generate the result
+    #TODO: verify that increasing temperature proportionally to input length
+    #      actually does help the model avoid repetition loops.
+    result_ids = model.generate(model_input_ids,
+                                max_length=tokenizer.model_max_length,
+                                pad_token_id=tokenizer.pad_token_id,
+                                length_penalty=0.1,
+                                top_k=50,
+                                top_p=0.95,
+                                do_sample=True,
+                                temperature=1.5 + 0.002 * model_input_ids.shape[-1],
+                                num_beams=6,
+                                early_stopping=True,
+                                num_return_sequences=1)
+    
+    result_ids = result_ids.to("cpu")
+    
+    #Print the result(s)
+    for i in range(result_ids.shape[0]):
+        response_start_idx = model_input_ids.shape[-1]
+        if has_continuation_prompt:
+            response_start_idx -= 1
+            
+        generated_text = tokenizer.decode(result_ids[:, response_start_idx:][i], 
+                                          skip_special_tokens=False)
+        if i == 0:
+            dialog_history.append(generated_text)
+            
+        processed_output = postprocess_output(generated_text, narrative_token, 
+                                              dialog_token, tokenizer.eos_token)
+        print("Generator: {}".format(processed_output))
+        print()
 
 if __name__ == "__main__":
     main()
