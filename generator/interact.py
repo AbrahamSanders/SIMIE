@@ -41,6 +41,7 @@ def main():
     model.eval()
     
     #Start the interaction loop
+    narrative_token = tokenizer.additional_special_tokens[0]
     dialog_history = []
     while True:
         user_input = input(">> User: ")
@@ -54,10 +55,14 @@ def main():
         
         if bool(np.random.binomial(1, args.prompt_narrative_prob)):
             generate(args, model, device, tokenizer, dialog_history, user_input, prompt_narrative=True)
-            generate(args, model, device, tokenizer, dialog_history, prompt_dialog=True)
         else:    
             generate(args, model, device, tokenizer, dialog_history, user_input)
         
+        #If a narrative is generated, generate a follow-up dialog response to the user input.
+        if dialog_history[-1].startswith(narrative_token):
+            generate(args, model, device, tokenizer, dialog_history, user_input, prompt_dialog=True)
+            #remove the second copy of the user input from the dialog history.
+            dialog_history.pop(-2)
         
 def generate(args, model, device, tokenizer, dialog_history, user_input=None, prompt_narrative=False, prompt_dialog=False):
     if prompt_narrative and prompt_dialog:
@@ -83,6 +88,7 @@ def generate(args, model, device, tokenizer, dialog_history, user_input=None, pr
             break
         dialog_history.pop(0)
         
+    #print(model_input)
     model_input_ids = model_input_ids.to(device)
     
     #Generate the result
