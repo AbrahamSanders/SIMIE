@@ -11,11 +11,16 @@ from interact_helpers import preprocess_input, postprocess_output
 def main():
     # load the args & config
     parser = argparse.ArgumentParser("Interact with the generator model")
-    parser.add_argument("--modelpath", default="output/checkpoint-21000", required=False, help="Path to the Huggingface Transformers GPT-2 model to load.")
-    parser.add_argument("--force-cpu", action="store_true", required=False, help="Force the device to cpu even if a supported GPU is present.")
-    parser.add_argument("--prompt-narrative-prob", type=float, default=0.3, required=False, help="Probability that the model will get prompted to generate narrative at each turn.")
-    parser.add_argument("--max-input-tokens", type=int, default=512, required=False, help="Maximum number of tokens to use as input. Dialog history gets trimmed from the back to accommodate this.")
-    parser.add_argument("--print-raw", action="store_true", required=False, help="Print the raw model input and output for debugging purposes.")
+    parser.add_argument("--modelpath", default="models/gpt2-large-dialog-narrative", required=False, 
+                        help="Path to the Huggingface Transformers GPT-2 model to load. (default: %(default)s)")
+    parser.add_argument("--force-cpu", action="store_true", required=False, 
+                        help="Force the device to cpu even if a supported GPU is present.")
+    parser.add_argument("--prompt-narrative-prob", type=float, default=0.2, required=False, 
+                        help="Probability that the model will get prompted to generate narrative at each turn. (default: %(default)s)")
+    parser.add_argument("--max-input-tokens", type=int, default=350, required=False, 
+                        help="Maximum number of tokens to use as input. Dialog history gets trimmed from the back to accommodate this. (default: %(default)s)")
+    parser.add_argument("--print-raw", action="store_true", required=False, 
+                        help="Print the raw model input and output for debugging purposes.")
     # TODO: support a larger set of options such as setting inference hyperparams.
     # Also support a user menu to set most of these options during runtime, like
     # https://github.com/AbrahamSanders/seq2seq-chatbot/blob/master/seq2seq-chatbot/chat_command_handler.py

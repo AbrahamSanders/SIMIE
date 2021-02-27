@@ -37,8 +37,7 @@ A new prefix indicates if each line is narrative (`[N]`) or dialog (`[D]`):
 
 The narrative passages paint a picture of the scene in which the dialog takes place.
 
-## Setup
-### Dataset
+## Build the dataset
 1. Clone the [fork of ricsinaruto/gutenberg-dialog](https://github.com/AbrahamSanders/gutenberg-dialog)
 2. From the clone directory, in a terminal run:
    ```
@@ -48,5 +47,13 @@ The narrative passages paint a picture of the scene in which the dialog takes pl
 
 3. The dataset can be found in `data/filtered/en/dialogs.txt`. Additionally, the tool creates a train / validation (dev) / test split of the dialogs which can be found in the same directory, named `train.txt`, `dev.txt`, and `test.txt`.
 
-## Usage
-COMING SOON!
+## Chat with the pre-trained model: gpt2-large finetuned on the dataset
+1. Download the model [gpt2-large-dialog-narrative](https://drive.google.com/file/d/19xcUfBtRUCp_r88e3d9cTFAyLsjedbFl/view?usp=sharing) and extract to directory `generator/models/gpt2-large-dialog-narrative`.
+
+2. Run `interact.py`:
+   ```
+   python interact.py
+   ```
+   Additional command line options can be used:
+
+   ![interact.py commands](images/interact_commands.png)
