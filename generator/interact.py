@@ -15,6 +15,7 @@ def main():
     parser.add_argument("--force-cpu", action="store_true", required=False, help="Force the device to cpu even if a supported GPU is present.")
     parser.add_argument("--prompt-narrative-prob", type=float, default=0.3, required=False, help="Probability that the model will get prompted to generate narrative at each turn.")
     parser.add_argument("--max-input-tokens", type=int, default=512, required=False, help="Maximum number of tokens to use as input. Dialog history gets trimmed from the back to accommodate this.")
+    parser.add_argument("--print-raw", action="store_true", required=False, help="Print the raw model input and output for debugging purposes.")
     # TODO: support a larger set of options such as setting inference hyperparams.
     # Also support a user menu to set most of these options during runtime, like
     # https://github.com/AbrahamSanders/seq2seq-chatbot/blob/master/seq2seq-chatbot/chat_command_handler.py
@@ -45,12 +46,16 @@ def main():
     dialog_history = []
     while True:
         user_input = input(">> User: ")
-        if user_input == "exit":
+        if user_input == "--exit":
             break
         if user_input == "--reset":
             dialog_history.clear()
             print("Dialog history cleared.")
             print()
+            continue
+        if user_input == "--print-raw":
+            args.print_raw = not args.print_raw
+            print("print_raw set to %s." % args.print_raw)
             continue
         
         if bool(np.random.binomial(1, args.prompt_narrative_prob)):
@@ -87,8 +92,9 @@ def generate(args, model, device, tokenizer, dialog_history, user_input=None, pr
         if model_input_ids.shape[-1] <= args.max_input_tokens:
             break
         dialog_history.pop(0)
-        
-    #print(model_input)
+    
+    if args.print_raw:
+        print(model_input)
     model_input_ids = model_input_ids.to(device)
     
     #Generate the result
@@ -118,9 +124,12 @@ def generate(args, model, device, tokenizer, dialog_history, user_input=None, pr
                                           skip_special_tokens=False)
         if i == 0:
             dialog_history.append(generated_text)
-            
-        processed_output = postprocess_output(generated_text, narrative_token, 
-                                              dialog_token, tokenizer.eos_token)
+        
+        if args.print_raw:
+            processed_output = generated_text
+        else:
+            processed_output = postprocess_output(generated_text, narrative_token, 
+                                                  dialog_token, tokenizer.eos_token)
         print("Generator: {}".format(processed_output))
         print()
 
