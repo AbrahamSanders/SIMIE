@@ -1,0 +1,31 @@
+>> User: ***I went to the grocer to buy a bag full of tomatoes.*** How much for these tomatoes?
+Generator: Twenty-five cents a quart.
+
+>> User: Twenty-five cents? Isn't that a bit much? The place down the street only charges Twenty-two.
+Generator: I didn't ask you how much it cost. I didn't know you knew anything about tomatoes.
+
+>> User: I am just looking to get a fair price. Will you give me these for Twenty-two cents a quart?
+Generator: Certainly.
+
+>> User: Thank you. This bag is two quarts. How many cents will that be?
+Generator: Three cents a quart.
+
+>> User: But sir, you just said Twenty-two. Are you really going to give these to me for three?
+Generator: Yes, sir.
+
+>> User: Why?
+Generator: Because I am not going to send you any of your tomatoes unless you get your price.
+
+>> User: Aren't you afraid I will tell others they can get their tomatoes from you for such a cheap price? You would be at a great loss...
+Generator: No, sir. I don't care how much you tell about it. Are you satisfied with your bargain?
+
+>> User: It is very generous indeed.
+Generator: ***I was very glad to hear that. As for myself I was very glad to go to my grocer, as I was in great trouble. I was glad I was not going to get my money back if it was only for fifty cents.***
+
+Generator: And I don't say no, because if I can get them for fifty cents I am sure I can get them cheaper, and then I'll be glad to have them for nothing.
+
+>> User: Well then. Here is six cents for the two quart bag of tomatoes. ***I handed him two coins.***
+Generator: Thank you, sir.
+
+>> User: Have a great day!
+Generator: ***We parted, with a great feeling of gratitude for Mr. Goodnow. In his kindness, he had been an excellent friend and teacher to me. He was still, I am sure, much more kind than Mr. Goodnow.***

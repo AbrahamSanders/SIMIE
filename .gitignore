@@ -133,3 +133,6 @@ generator/output/*
 generator/models/*
 generator/cached/*
 generator/runs/*
+
+# VSCode
+.vscode/*

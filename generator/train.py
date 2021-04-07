@@ -58,25 +58,25 @@ class Args():
         self.max_sequence_length = 512
         self.output_dir = 'output'
         self.model_type = 'gpt2'
-        self.model_name_or_path = 'gpt2'
-        self.config_name = 'gpt2'
-        self.tokenizer_name = 'gpt2'
+        self.model_name_or_path = 'gpt2-xl'
+        self.config_name = 'gpt2-xl'
+        self.tokenizer_name = 'gpt2-xl'
         self.cache_dir = 'cached'
         self.do_train = True
         self.do_eval = True
         self.evaluate_during_training = True
         self.per_gpu_train_batch_size = 2
         self.per_gpu_eval_batch_size = 2
-        self.gradient_accumulation_steps = 1
+        self.gradient_accumulation_steps = 4
         self.learning_rate = 5e-5
         self.weight_decay = 0.0
         self.adam_epsilon = 1e-8
         self.max_grad_norm = 1.0
-        self.num_train_epochs = 10
+        self.num_train_epochs = 4
         self.max_steps = -1
         self.warmup_steps = 0
-        self.logging_steps = 1000
-        self.save_steps = 7000
+        self.logging_steps = 10000
+        self.save_steps = 70000
         self.save_total_limit = None
         self.eval_all_checkpoints = True
         self.no_cuda = False
@@ -88,8 +88,23 @@ class Args():
         self.fp16 = False
         self.fp16_opt_level = 'O1'
 
-args = Args()
+class Datasets(object):
+    def __init__(self):
+        self.train_dataset = None
+        self.eval_dataset = None
 
+    def load_train_examples(self, args, tokenizer, df_trn):
+        if self.train_dataset is None:
+            self.train_dataset = ConversationDataset(tokenizer, args, df_trn)
+        return self.train_dataset
+
+    def load_eval_examples(self, args, tokenizer, df_val):
+        if self.eval_dataset is None:
+            self.eval_dataset = ConversationDataset(tokenizer, args, df_val)
+        return self.eval_dataset
+
+args = Args()
+datasets = Datasets()
 
 def add_special_tokens_(model, tokenizer):
     """ Add special tokens to the tokenizer and the model if they have not already been added. """
@@ -101,17 +116,28 @@ def add_special_tokens_(model, tokenizer):
 
 class ConversationDataset(Dataset):
     def __init__(self, tokenizer: PreTrainedTokenizer, args, df):
-        narrative_token, dialog_token = tokenizer.additional_special_tokens
-        dataset = train_helpers.load_dataset(df, narrative_token, dialog_token, tokenizer.eos_token)
-        self.examples = [tokenizer.encode(e) for e in dataset]
-        num_examples = len(self.examples)
-        logger.info("Loaded %d examples from dataset.", num_examples)
         #drop any examples which exceed the max sequence length (or the model max length as a default)
         max_sequence_length = args.max_sequence_length
         if max_sequence_length is None or max_sequence_length > tokenizer.model_max_length:
             logger.info("Using model max length %d as max sequence length", tokenizer.model_max_length)
             max_sequence_length = tokenizer.model_max_length
-        self.examples = [e for e in self.examples if len(e) <= max_sequence_length]
+
+        #open the dataset file
+        narrative_token, dialog_token = tokenizer.additional_special_tokens
+        dataset = train_helpers.load_dataset(df, narrative_token, dialog_token, tokenizer.eos_token)
+
+        #read in and tokenize the examples
+        num_examples = 0
+        self.examples = []
+        for example in dataset:
+            num_examples += 1
+            if num_examples % 100000 == 0:
+                logger.info("Loaded %d examples from dataset...", num_examples)
+            tokenized_example = tokenizer.encode(example)
+            if len(tokenized_example) <= max_sequence_length:
+                self.examples.append(tokenized_example)
+        
+        logger.info("Loaded %d examples from dataset.", num_examples)
         logger.info("Dropped %d examples which exceed %d tokens. %d examples remain.", 
                     num_examples - len(self.examples), 
                     max_sequence_length, 
@@ -124,10 +150,6 @@ class ConversationDataset(Dataset):
         return torch.tensor(self.examples[item], dtype=torch.long)
     
 # Cacheing and storing of data/checkpoints
-
-def load_examples(args, tokenizer, df_trn, df_val, evaluate=False):
-    return ConversationDataset(tokenizer, args, df_val if evaluate else df_trn)
-
 
 def set_seed(args):
     random.seed(args.seed)
@@ -324,7 +346,7 @@ def train(args, train_dataset, df_val, model: PreTrainedModel, tokenizer: PreTra
                     if (
                         args.local_rank == -1 and args.evaluate_during_training
                     ):  # Only evaluate when single GPU otherwise metrics may not average well
-                        results = evaluate(args, model, tokenizer, None, df_val)
+                        results = evaluate(args, model, tokenizer, df_val)
                         for key, value in results.items():
                             tb_writer.add_scalar("eval_{}".format(key), value, global_step)
                     tb_writer.add_scalar("lr", scheduler.get_lr()[0], global_step)
@@ -365,11 +387,11 @@ def train(args, train_dataset, df_val, model: PreTrainedModel, tokenizer: PreTra
 
 # Evaluation of some model
 
-def evaluate(args, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, df_trn, df_val, prefix="") -> Dict:
+def evaluate(args, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, df_val, prefix="") -> Dict:
     # Loop to handle MNLI double evaluation (matched, mis-matched)
     eval_output_dir = args.output_dir
 
-    eval_dataset = load_examples(args, tokenizer, df_trn, df_val, evaluate=True)
+    eval_dataset = datasets.load_eval_examples(args, tokenizer, df_val)
     os.makedirs(eval_output_dir, exist_ok=True)
     args.eval_batch_size = args.per_gpu_eval_batch_size * max(1, args.n_gpu)
     # Note that DistributedSampler samples randomly
@@ -487,7 +509,7 @@ def main():
 
     # Training
     if args.do_train:
-        train_dataset = load_examples(args, tokenizer, df_trn, df_val, evaluate=False)
+        train_dataset = datasets.load_train_examples(args, tokenizer, df_trn)
 
         global_step, tr_loss = train(args, train_dataset, df_val, model, tokenizer)
         logger.info(" global_step = %s, average loss = %s", global_step, tr_loss)
@@ -530,7 +552,7 @@ def main():
 
             model = AutoModelForCausalLM.from_pretrained(checkpoint)
             model.to(args.device)
-            result = evaluate(args, model, tokenizer, df_trn, df_val, prefix=prefix)
+            result = evaluate(args, model, tokenizer, df_val, prefix=prefix)
             result = dict((k + "_{}".format(global_step), v) for k, v in result.items())
             results.update(result)
 

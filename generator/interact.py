@@ -11,7 +11,7 @@ from interact_helpers import preprocess_input, postprocess_output
 def main():
     # load the args & config
     parser = argparse.ArgumentParser("Interact with the generator model")
-    parser.add_argument("--modelpath", default="models/gpt2-large-dialog-narrative", required=False, 
+    parser.add_argument("--modelpath", default="models/gpt2-xl-dialog-narrative", required=False, 
                         help="Path to the Huggingface Transformers GPT-2 model to load. (default: %(default)s)")
     parser.add_argument("--force-cpu", action="store_true", required=False, 
                         help="Force the device to cpu even if a supported GPU is present.")
@@ -130,11 +130,11 @@ def generate(args, model, device, tokenizer, dialog_history, identities, user_in
     result_ids = model.generate(model_input_ids,
                                 max_length=tokenizer.model_max_length,
                                 pad_token_id=tokenizer.pad_token_id,
-                                length_penalty=0.1,
+                                #length_penalty=0.1,
                                 top_k=50,
                                 top_p=0.95,
                                 do_sample=True,
-                                temperature=1.5 + 0.003 * model_input_ids.shape[-1],
+                                temperature=1.5 + 0.002 * model_input_ids.shape[-1],
                                 num_beams=6,
                                 early_stopping=True,
                                 num_return_sequences=1)

@@ -47,13 +47,43 @@ The narrative passages paint a picture of the scene in which the dialog takes pl
 
 3. The dataset can be found in `data/filtered/en/dialogs.txt`. Additionally, the tool creates a train / validation (dev) / test split of the dialogs which can be found in the same directory, named `train.txt`, `dev.txt`, and `test.txt`.
 
-## Chat with the pre-trained model: gpt2-large finetuned on the dataset
-1. Download the model [gpt2-large-dialog-narrative](https://drive.google.com/file/d/19xcUfBtRUCp_r88e3d9cTFAyLsjedbFl/view?usp=sharing) and extract to directory `generator/models/gpt2-large-dialog-narrative`.
+## Chat with the pre-trained model: gpt2-xl finetuned on the dataset
+1. Download the model [gpt2-xl-dialog-narrative](https://drive.google.com/file/d/1vnY9CjgZSuuZdOpCUcDc7xhKf48SSHfD/view?usp=sharing) and extract to directory `generator/models/gpt2-xl-dialog-narrative`.
 
 2. Run `interact.py`:
    ```
    python interact.py
    ```
-   Additional command line options can be used:
 
-   ![interact.py commands](images/interact_commands.png)
+   Additional command line options can be used:
+   
+   ```
+   python interact.py --help
+
+   usage: Interact with the generator model [-h] [--modelpath MODELPATH]
+                                            [--force-cpu]
+                                            [--prompt-narrative-prob PROMPT_NARRATIVE_PROB]
+                                            [--max-input-tokens MAX_INPUT_TOKENS]
+                                            [--print-raw] [--speaker-tracking]
+
+   optional arguments:
+   -h, --help            show this help message and exit
+   --modelpath MODELPATH
+                           Path to the Huggingface Transformers GPT-2 model to
+                           load. (default: models/gpt2-xl-dialog-narrative)
+   --force-cpu           Force the device to cpu even if a supported GPU is
+                           present.
+   --prompt-narrative-prob PROMPT_NARRATIVE_PROB
+                           Probability that the model will get prompted to
+                           generate narrative at each turn. (default: 0.2)
+   --max-input-tokens MAX_INPUT_TOKENS
+                           Maximum number of tokens to use as input. Dialog
+                           history gets trimmed from the back to accommodate
+                           this. (default: 350)
+   --print-raw           Print the raw model input and output for debugging
+                           purposes.
+   --speaker-tracking    Enable speaker tracking through narrative prompts.
+   ```
+
+   ## Explore examples generated with the pre-trained model:
+   See: [examples](examples)

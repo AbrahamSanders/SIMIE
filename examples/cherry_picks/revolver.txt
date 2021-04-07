@@ -1,0 +1,44 @@
+Enter your name: Jack
+Enter a name for the generator: Sir George
+
+>> Jack: Sir George!
+Sir George: Yes, Jack, what is it?
+
+>> Jack: I have something to give you.
+Sir George: What is it, Jack?
+
+>> Jack: ***Jack pulled a loaded revolver out of his jacket and pointed it at Sir George.*** This!
+Sir George: What the dickens is it?
+
+>> Jack: A revolver, sir, and it's pointed at your head.
+Sir George: ***Sir George opened his mouth to answer, but closed it once again. Then he said,***
+
+Sir George: A what, Jack?
+
+>> Jack: A gun. I intend to shoot you.
+Sir George: ***Sir George stared at him for a moment and then said,***
+
+Sir George: No; don't--don't, dear boy; I don't think you know what you are saying.
+
+>> Jack: I know very well what I am saying. You crossed me and now you need to die.
+Sir George: I am going to die, dear boy.
+
+>> Jack: Indeed. Do you have any last words?
+Sir George: No, dear boy. I can't answer that. What are your last words, Jack?
+
+>> Jack: See you in hell. ***Jack pulled the trigger and shot Sir George squarely between the eyes. Sir George collapsed on the ground.***
+Sir George: Don't, please, Jack. I am not a coward, but I can't see any good in all this. You ought to be hanged.
+
+>> Jack: Oh, it seems I missed. It's a pity. I only had one bullet.
+Sir George: ***But Sir George replied,***
+
+Sir George: You are a coward, Jack, You ought to be hanged.
+
+>> Jack: And you ought to be shot for what you've done to me.
+Sir George: Oh, all right. But you must tell me what about, Jack, for I can't be hanged.
+
+>> Jack: ***Jack tossed the empty revolver on the ground next to Sir George.*** I hope I never see you again, sir George, because next time I won't miss.
+Sir George: Oh no. The last time it's too dark and you want to know why I never get out a shot. That's my last bullet.
+
+>> Jack: Good night.
+Sir George: I hope I'm not dead, dear Jack. I'll tell you soon. You did your best.

@@ -1,0 +1,25 @@
+Enter your name: Jack
+Enter a name for the generator: Sir George
+
+>> Jack: Good afternoon Sir George. May I have a word?
+Sir George: Certainly, my boy. What is it?
+
+>> Jack: It's just that I am not happy working in the fields, sir. I feel I would be better suited to train as a footman.
+Sir George: My dear boy, do you think you can get along as a footman?
+
+>> Jack: I can learn anything I need to know.
+Sir George: Well, then, do your utmost, and we will see if you can't be a better footman.
+
+>> Jack: Do you think you would be able to try me out?
+Sir George: Yes, I think I will, my boy; I will try you out to the best of my ability.
+
+>> Jack: Thank you sir! You will not regret it. ***Jack smiled gratefully.*** When do I start?
+Sir George: ***Sir George asked as he rose to go.***
+
+Sir George: When do you want to go? I shall have plenty of time to go down, but I must catch the 10.30 for the train.
+
+>> Jack: Do you mean to say I start today?
+Sir George: Yes, I am sure you do. I shall be down about three hours. Good luck to you.
+
+>> Jack: Thank you again Sir. ***Jack tipped his hat.***
+Sir George: Come to me again, and we can have some nice talk about the future. Good-bye.
