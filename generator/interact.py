@@ -5,8 +5,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 import argparse
 import numpy as np
-
-from interact_helpers import preprocess_input, postprocess_output
+import interact_helpers
 
 def main():
     # load the args & config
@@ -80,14 +79,8 @@ def main():
         
         #If a narrative is generated, generate a follow-up dialog response to the user input.
         if dialog_history[-1].startswith(narrative_token):
-            generate(args, model, device, tokenizer, dialog_history, identities, user_input, prompt_dialog=True)
-            #remove the second copy of the user input from the dialog history.
-            if args.speaker_tracking:
-                #remove the speaker tracking tag associated with the second copy of the user input
-                dialog_history.pop(-3)
-                dialog_history.pop(-3)
-            else: 
-                dialog_history.pop(-2)
+            generate(args, model, device, tokenizer, dialog_history, identities, prompt_dialog=True)
+
         
 def generate(args, model, device, tokenizer, dialog_history, identities, user_input=None, prompt_narrative=False, prompt_dialog=False):
     if prompt_narrative and prompt_dialog:
@@ -97,16 +90,25 @@ def generate(args, model, device, tokenizer, dialog_history, identities, user_in
     narrative_token, dialog_token = tokenizer.additional_special_tokens
     
     #If provided, preprocess user input and add to the dialog history
+    speaker_tracking_reply = False
     if user_input is not None:
-        processed_input = preprocess_input(user_input, narrative_token, 
-                                           dialog_token, tokenizer.eos_token)
-        
-        if args.speaker_tracking and not processed_input.startswith(narrative_token):
-            dialog_history.append(narrative_token + identities["user"] + " said," + tokenizer.eos_token)
-        
-        dialog_history.append(processed_input)
-        
-        if args.speaker_tracking and not prompt_narrative:
+        processed_input = interact_helpers.preprocess_input(user_input, narrative_token, 
+                                                            dialog_token, tokenizer.eos_token)
+        for processed_segment in processed_input:
+            if args.speaker_tracking:
+                if processed_segment.startswith(narrative_token):
+                    processed_segment = interact_helpers.force_third_person(processed_segment, identities["user"])
+                elif not speaker_tracking_reply:
+                    speaker_tracking_reply = True
+                    dialog_history.append(narrative_token + identities["user"] + " said," + tokenizer.eos_token)   
+            dialog_history.append(processed_segment)
+            
+    if args.speaker_tracking and (prompt_dialog or (speaker_tracking_reply and not prompt_narrative)):
+        #It is possible that the model previously generated the speaker tracking reply prompt
+        #after being prompted to generate narrative. In this case, we don't want to add a duplicate
+        #reply prompt.
+        if len(dialog_history) > 0 and not interact_helpers.is_speaker_tracking_prompt(
+                dialog_history[-1], identities["generator"], narrative_token, tokenizer.eos_token):
             dialog_history.append(narrative_token + identities["generator"] + " replied," + tokenizer.eos_token)
     
     #Tokenize the model input, trimming the dialog history to stay below the maximum length.
@@ -155,8 +157,8 @@ def generate(args, model, device, tokenizer, dialog_history, identities, user_in
         if args.print_raw:
             processed_output = generated_text
         else:
-            processed_output = postprocess_output(generated_text, narrative_token, 
-                                                  dialog_token, tokenizer.eos_token)
+            processed_output = interact_helpers.postprocess_output(generated_text, narrative_token, 
+                                                                   dialog_token, tokenizer.eos_token)
         print("{0}: {1}".format(identities["generator"], processed_output))
         print()
 

@@ -18,8 +18,13 @@ def preprocess_input(user_input, narrative_token, dialog_token, eos_token):
             segments[i] = (narrative_token if i % 2 == 1 else dialog_token) + seg + eos_token
         else:
             segments[i] = seg
-    processed_input = "".join(segments)
-    return processed_input
+            
+    segments = [seg for seg in segments if seg != ""]
+    
+    if len(segments) == 0:
+        segments.append(dialog_token + eos_token)
+        
+    return segments
 
 def postprocess_output(model_output, narrative_token, dialog_token, eos_token):
     """
@@ -46,3 +51,25 @@ def postprocess_output(model_output, narrative_token, dialog_token, eos_token):
                     .strip())
     
     return model_output
+
+def force_third_person(segment, identity):
+    if segment is None:
+        return segment
+    return (segment.replace(" I ", " %s " % identity)
+                    .replace(" i ", " %s " % identity)
+                    .replace("|>I ", "|>%s " % identity)
+                    .replace("|>i ", "|>%s " % identity)
+                    .replace(" I<|", " %s<|" % identity)
+                    .replace(" i<|", " %s<|" % identity))
+
+def is_speaker_tracking_prompt(segment, identity, narrative_token, eos_token):
+    if segment is not None:
+        if segment.startswith("%s%s said," % (narrative_token, identity)):
+            return True
+        if segment.startswith("%s%s replied," % (narrative_token, identity)):
+            return True
+        if segment.startswith(narrative_token) and segment.endswith("%s said,%s" % (identity, eos_token)):
+            return True
+        if segment.startswith(narrative_token) and segment.endswith("%s replied,%s" % (identity, eos_token)):
+            return True
+    return False
