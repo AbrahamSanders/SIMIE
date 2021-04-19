@@ -5,6 +5,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 import argparse
 import numpy as np
+
+from identities import Identities
 import interact_helpers
 
 def main():
@@ -47,19 +49,19 @@ def main():
     model.to(device)
     model.eval()
     
-    identities = {
-        "user": "User",
-        "generator": "Generator"
-    }
+    identities = Identities()
     
     #Start the interaction loop
     if args.speaker_tracking:
-        identities["user"] = input("Enter your name: ")
-        identities["generator"] = input("Enter a name for the generator: ")
+        identities.user = input("Enter your name: ")
+        identities.generator = input("Enter a name for the generator: ")
     narrative_token = tokenizer.additional_special_tokens[0]
     dialog_history = []
+    
     while True:
-        user_input = input(">> %s: " % identities["user"])
+        identities.reset()
+        generate_count = 1
+        user_input = input(">> %s: " % identities.user)
         if user_input == "--exit":
             break
         if user_input == "--reset":
@@ -71,15 +73,28 @@ def main():
             args.print_raw = not args.print_raw
             print("print_raw set to %s." % args.print_raw)
             continue
-        
-        if bool(np.random.binomial(1, args.prompt_narrative_prob)):
-            generate(args, model, device, tokenizer, dialog_history, identities, user_input, prompt_narrative=True)
-        else:    
-            generate(args, model, device, tokenizer, dialog_history, identities, user_input)
-        
-        #If a narrative is generated, generate a follow-up dialog response to the user input.
-        if dialog_history[-1].startswith(narrative_token):
-            generate(args, model, device, tokenizer, dialog_history, identities, prompt_dialog=True)
+        if user_input == "--auto-generate":
+            if len(dialog_history) == 0:
+                print("The first turn must be taken by the user.")
+                continue
+            user_input = None
+            generate_count = 10
+
+        for _ in range(generate_count):
+            #When generating more than once, the generator will be impersonating the user every other step
+            #so the identities need to be swapped.
+            if generate_count > 1:
+                identities.swap()
+
+            #Generate the next step
+            if bool(np.random.binomial(1, args.prompt_narrative_prob)):
+                generate(args, model, device, tokenizer, dialog_history, identities, user_input, prompt_narrative=True)
+            else:    
+                generate(args, model, device, tokenizer, dialog_history, identities, user_input)
+            
+            #If a narrative is generated, generate a follow-up dialog response.
+            if dialog_history[-1].startswith(narrative_token):
+                generate(args, model, device, tokenizer, dialog_history, identities, prompt_dialog=True)
 
         
 def generate(args, model, device, tokenizer, dialog_history, identities, user_input=None, prompt_narrative=False, prompt_dialog=False):
@@ -89,7 +104,7 @@ def generate(args, model, device, tokenizer, dialog_history, identities, user_in
         
     narrative_token, dialog_token = tokenizer.additional_special_tokens
     
-    #If provided, preprocess user input and add to the dialog history
+    #If provided, preprocess user input and add to the dialog history.
     speaker_tracking_reply = False
     if user_input is not None:
         processed_input = interact_helpers.preprocess_input(user_input, narrative_token, 
@@ -97,19 +112,48 @@ def generate(args, model, device, tokenizer, dialog_history, identities, user_in
         for processed_segment in processed_input:
             if args.speaker_tracking:
                 if processed_segment.startswith(narrative_token):
-                    processed_segment = interact_helpers.force_third_person(processed_segment, identities["user"])
+                    processed_segment = interact_helpers.force_third_person(processed_segment, identities.user)
+                #Give the user a speaker tracking prompt if at least one dialog utterance
+                #exists in the user input. If multiple dialog utterances exist, only give one
+                #speaker tracking prompt.
                 elif not speaker_tracking_reply:
+                    dialog_history.append(narrative_token + identities.user + " said," + tokenizer.eos_token)
+                    #The model should also receive a speaker tracking prompt since it should reply to the user's
+                    #dialog utterance(s).
                     speaker_tracking_reply = True
-                    dialog_history.append(narrative_token + identities["user"] + " said," + tokenizer.eos_token)   
             dialog_history.append(processed_segment)
+        
+    if args.speaker_tracking:
+        #speaker_tracking_reply indicates if the model should receive a speaker tracking prompt
+        #when speaker tracking is enabled. By default it is set to true if the user input exists
+        #and contains at least one dialog (see immediately above). 
+        #However there are some additional conditions to check:
+        
+        #Condition (A): If the model is receiving a dialog prompt, we always want to give it
+        #a speaker tracking prompt even in the absence of a user input with dialog.
+        if prompt_dialog:
+            speaker_tracking_reply = True
+        #Condition (B): In the absence of user input we can infer if the previous generated step was a dialog,
+        #in which case we want to give the model a speaker tracking prompt.
+        if user_input is None and len(dialog_history) > 0 and not dialog_history[-1].startswith(narrative_token):
+            speaker_tracking_reply = True
             
-    if args.speaker_tracking and (prompt_dialog or (speaker_tracking_reply and not prompt_narrative)):
-        #It is possible that the model previously generated the speaker tracking reply prompt
-        #after being prompted to generate narrative. In this case, we don't want to add a duplicate
-        #reply prompt.
-        if len(dialog_history) > 0 and not interact_helpers.is_speaker_tracking_prompt(
-                dialog_history[-1], identities["generator"], narrative_token, tokenizer.eos_token):
-            dialog_history.append(narrative_token + identities["generator"] + " replied," + tokenizer.eos_token)
+        #The following conditions OVERRIDE the previous ones:
+            
+        #Condition (C): If the model is receiving a narrative prompt, it makes no sense to give it
+        #a speaker tracking prompt since the model will not output a dialog utterance.
+        if prompt_narrative:
+            speaker_tracking_reply = False
+        #Condition (D): It is possible that the model previously generated the speaker tracking prompt
+        #after being prompted to generate narrative. In this case, we don't want to give it a duplicate prompt.
+        if len(dialog_history) > 0 and interact_helpers.is_speaker_tracking_prompt(
+                dialog_history[-1], identities.generator, narrative_token, tokenizer.eos_token):
+            speaker_tracking_reply = False
+        
+        #Give the model a speaker tracking prompt if all the conditions are met.
+        if speaker_tracking_reply:
+            action = " said," if identities.is_swapped else " replied,"
+            dialog_history.append(narrative_token + identities.generator + action + tokenizer.eos_token)
     
     #Tokenize the model input, trimming the dialog history to stay below the maximum length.
     while True:
@@ -159,7 +203,7 @@ def generate(args, model, device, tokenizer, dialog_history, identities, user_in
         else:
             processed_output = interact_helpers.postprocess_output(generated_text, narrative_token, 
                                                                    dialog_token, tokenizer.eos_token)
-        print("{0}: {1}".format(identities["generator"], processed_output))
+        print("{0}: {1}".format(identities.generator, processed_output))
         print()
 
 if __name__ == "__main__":
