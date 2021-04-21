@@ -22,8 +22,10 @@ def main():
                         help="Maximum number of tokens to use as input. Dialog history gets trimmed from the back to accommodate this. (default: %(default)s)")
     parser.add_argument("--print-raw", action="store_true", required=False, 
                         help="Print the raw model input and output for debugging purposes.")
-    parser.add_argument("--speaker-tracking", action="store_true", default=True,
+    parser.add_argument("--speaker-tracking", action="store_true", required=False,
                         help="Enable speaker tracking through narrative prompts.")
+    parser.add_argument("--num-beams", type=int, default=6, required=False,
+                        help="Number of beams to use for beam search generation.")
     # TODO: support a larger set of options such as setting inference hyperparams.
     # Also support a user menu to set most of these options during runtime, like
     # https://github.com/AbrahamSanders/seq2seq-chatbot/blob/master/seq2seq-chatbot/chat_command_handler.py
@@ -88,13 +90,17 @@ def main():
 
             #Generate the next step
             if bool(np.random.binomial(1, args.prompt_narrative_prob)):
-                generate(args, model, device, tokenizer, dialog_history, identities, user_input, prompt_narrative=True)
+                response = generate(args, model, device, tokenizer, dialog_history, identities, user_input, prompt_narrative=True)
             else:    
-                generate(args, model, device, tokenizer, dialog_history, identities, user_input)
-            
+                response = generate(args, model, device, tokenizer, dialog_history, identities, user_input)
+            print(response)
+            print()
+
             #If a narrative is generated, generate a follow-up dialog response.
             if dialog_history[-1].startswith(narrative_token):
-                generate(args, model, device, tokenizer, dialog_history, identities, prompt_dialog=True)
+                response = generate(args, model, device, tokenizer, dialog_history, identities, prompt_dialog=True)
+                print(response)
+                print()
 
         
 def generate(args, model, device, tokenizer, dialog_history, identities, user_input=None, prompt_narrative=False, prompt_dialog=False):
@@ -181,7 +187,7 @@ def generate(args, model, device, tokenizer, dialog_history, identities, user_in
                                 top_p=0.95,
                                 do_sample=True,
                                 temperature=1.5 + 0.002 * model_input_ids.shape[-1],
-                                num_beams=6,
+                                num_beams=args.num_beams,
                                 early_stopping=True,
                                 num_return_sequences=1)
     
@@ -203,8 +209,8 @@ def generate(args, model, device, tokenizer, dialog_history, identities, user_in
         else:
             processed_output = interact_helpers.postprocess_output(generated_text, narrative_token, 
                                                                    dialog_token, tokenizer.eos_token)
-        print("{0}: {1}".format(identities.generator, processed_output))
-        print()
+        
+        return "{0}: {1}".format(identities.generator, processed_output)
 
 if __name__ == "__main__":
     main()
