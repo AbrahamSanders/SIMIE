@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en">
     <head>
-        <title>ChatBot</title>
+        <title>SIMIE Interact</title>
         <meta http-equiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
         <script src="https://code.jquery.com/jquery-1.12.4.min.js" integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ=" crossorigin="anonymous"></script>
@@ -66,7 +66,7 @@
                         convHistory = convHistory + "You: " + input;
                         convHistory = convHistory + "\n";
                         for (var i = 0; i < result.length; ++i) {
-                            convHistory = convHistory + result[i];
+                            convHistory = convHistory + "Generator: " + result[i];
                             convHistory = convHistory + "\n\n";
                         }
                         txtConvHistory.val(convHistory);
@@ -75,6 +75,9 @@
                         
                         var speechSyn = $("#chkUseSpeechSyn").is(":checked");
                         if (speechSyn) {
+                            for (var i = 0; i < result.length; ++i) {
+                                result[i] = result[i].replace(/\*\*\*/g, "")
+                            }
                             speak(result);
                         }
                     },
@@ -197,7 +200,7 @@
                 }
 
                 var voices = synth.getVoices();
-                utterance.voice = voices[4];
+                utterance.voice = voices[1];
 
                 synth.speak(utterance);
             }

@@ -19,11 +19,13 @@ parser.add_argument("--prompt-narrative-prob", type=float, default=0.2, required
 parser.add_argument("--max-input-tokens", type=int, default=350, required=False, 
                     help="Maximum number of tokens to use as input. Dialog history gets trimmed from the back to accommodate this. (default: %(default)s)")
 parser.add_argument("--print-raw", action="store_true", required=False, 
-                        help="Print the raw model input and output for debugging purposes.")
+                    help="Print the raw model input and output for debugging purposes.")
 parser.add_argument("--speaker-tracking", action="store_true", required=False,
                     help="Enable speaker tracking through narrative prompts.")
 parser.add_argument("--num-beams", type=int, default=6, required=False,
-                        help="Number of beams to use for beam search generation.")
+                    help="Number of beams to use for beam search generation.")
+parser.add_argument("--show-beams", action="store_true", required=False, 
+                    help="Print all beams when using beam search generation.")
 parser.add_argument("--port", "-p", default="8080", required=False, type=int, help="Port to run server on.")
 
 args = parser.parse_args()
@@ -49,7 +51,6 @@ model.eval()
 
 identities = Identities()
 narrative_token = tokenizer.additional_special_tokens[0]
-narrative_token = "<|narrative|>"
 sessions = {}
 
 app = Flask(__name__)
@@ -87,15 +88,15 @@ class Interaction(Resource):
 
         responses = []
         if bool(np.random.binomial(1, args.prompt_narrative_prob)):
-            response = generate(args, model, device, tokenizer, dialog_history, identities, user_input, prompt_narrative=True)
+            results = generate(args, model, device, tokenizer, dialog_history, identities, user_input, prompt_narrative=True)
         else:    
-            response = generate(args, model, device, tokenizer, dialog_history, identities, user_input)
-        responses.append(response)
+            results = generate(args, model, device, tokenizer, dialog_history, identities, user_input)
+        responses.extend(results)
 
         #If a narrative is generated, generate a follow-up dialog response.
         if dialog_history[-1].startswith(narrative_token):
-            response = generate(args, model, device, tokenizer, dialog_history, identities, prompt_dialog=True)
-            responses.append(response)
+            results = generate(args, model, device, tokenizer, dialog_history, identities, prompt_dialog=True)
+            responses.extend(results)
         return responses
 
 class UI(Resource):

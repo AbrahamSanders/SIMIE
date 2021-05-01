@@ -26,6 +26,8 @@ def main():
                         help="Enable speaker tracking through narrative prompts.")
     parser.add_argument("--num-beams", type=int, default=6, required=False,
                         help="Number of beams to use for beam search generation.")
+    parser.add_argument("--show-beams", action="store_true", required=False, 
+                        help="Print all beams when using beam search generation.")
     # TODO: support a larger set of options such as setting inference hyperparams.
     # Also support a user menu to set most of these options during runtime, like
     # https://github.com/AbrahamSanders/seq2seq-chatbot/blob/master/seq2seq-chatbot/chat_command_handler.py
@@ -75,6 +77,10 @@ def main():
             args.print_raw = not args.print_raw
             print("print_raw set to %s." % args.print_raw)
             continue
+        if user_input == "--show-beams":
+            args.show_beams = not args.show_beams
+            print("show_beams set to %s." % args.show_beams)
+            continue
         if user_input == "--auto-generate":
             if len(dialog_history) == 0:
                 print("The first turn must be taken by the user.")
@@ -90,17 +96,15 @@ def main():
 
             #Generate the next step
             if bool(np.random.binomial(1, args.prompt_narrative_prob)):
-                response = generate(args, model, device, tokenizer, dialog_history, identities, user_input, prompt_narrative=True)
+                results = generate(args, model, device, tokenizer, dialog_history, identities, user_input, prompt_narrative=True)
             else:    
-                response = generate(args, model, device, tokenizer, dialog_history, identities, user_input)
-            print(response)
-            print()
+                results = generate(args, model, device, tokenizer, dialog_history, identities, user_input)
+            print_results(results, identities, args.show_beams)
 
             #If a narrative is generated, generate a follow-up dialog response.
             if dialog_history[-1].startswith(narrative_token):
-                response = generate(args, model, device, tokenizer, dialog_history, identities, prompt_dialog=True)
-                print(response)
-                print()
+                results = generate(args, model, device, tokenizer, dialog_history, identities, prompt_dialog=True)
+                print_results(results, identities, args.show_beams)
 
         
 def generate(args, model, device, tokenizer, dialog_history, identities, user_input=None, prompt_narrative=False, prompt_dialog=False):
@@ -189,28 +193,40 @@ def generate(args, model, device, tokenizer, dialog_history, identities, user_in
                                 temperature=1.5 + 0.002 * model_input_ids.shape[-1],
                                 num_beams=args.num_beams,
                                 early_stopping=True,
-                                num_return_sequences=1)
+                                num_return_sequences=args.num_beams if args.show_beams else 1)
     
     result_ids = result_ids.to("cpu")
     
     #Print the result(s)
+    results = []
     for i in range(result_ids.shape[0]):
         response_start_idx = model_input_ids.shape[-1]
         if has_continuation_prompt:
             response_start_idx -= 1
             
-        generated_text = tokenizer.decode(result_ids[:, response_start_idx:][i], 
+        generated_text = tokenizer.decode(result_ids[i, response_start_idx:], 
                                           skip_special_tokens=False)
+        generated_text = generated_text.replace(tokenizer.pad_token, "")
+        
         if i == 0:
             dialog_history.append(generated_text)
         
         if args.print_raw:
-            processed_output = generated_text
+            results.append(generated_text)
         else:
-            processed_output = interact_helpers.postprocess_output(generated_text, narrative_token, 
-                                                                   dialog_token, tokenizer.eos_token)
+            results.append(interact_helpers.postprocess_output(generated_text, narrative_token, 
+                                                               dialog_token, tokenizer.eos_token))
         
-        return "{0}: {1}".format(identities.generator, processed_output)
+    return results
+
+def print_results(results, identities, show_beams):
+    if show_beams:
+        for beam_num, result in enumerate(results):
+            print("{0} [beam {1}]: {2}".format(identities.generator, beam_num + 1, result))
+            print()
+    else:
+        print("{0}: {1}".format(identities.generator, results[0])) 
+        print()
 
 if __name__ == "__main__":
     main()
