@@ -14,7 +14,7 @@
                 <textarea id="txtConvHistory" class="form-control" rows="10"></textarea>
             </div>
             <div class="form-group">
-                <label for="txtQuestion">Say:</label>
+                <label for="txtInput">Say:</label>
                 <div class="form-check form-check-inline float-right">
                     <input type="checkbox" id="chkUseSpeechSyn" class="form-check-input" checked="checked" />
                     <label for="chkUseSpeechSyn" class="form-check-label">Text-to-Speech</label>
@@ -24,7 +24,7 @@
                     <label for="chkUseSpeechRec" class="form-check-label">Speech-to-Text</label>
                 </div>
                 
-                <input type="text" id="txtQuestion" class="form-control pad" />
+                <input type="text" id="txtInput" class="form-control pad" />
                 <button class="btn btn-primary btn-sm btn-block mt-2" id="btnSay">Say</button>
             </div>
         </div>
@@ -49,7 +49,7 @@
             }
 
             function say(){
-                var question = $("#txtQuestion").val();
+                var input = $("#txtInput").val();
                 var session_id = getSessionId();
 
                 $.ajax({
@@ -57,21 +57,21 @@
                     type: "POST",
                     contentType: "application/json",
                     data: JSON.stringify({
-                        "user_input": question,
+                        "user_input": input,
                         "session_id": session_id
                     }),
                     success: function(result) {
                         var txtConvHistory = $("#txtConvHistory");
                         var convHistory = txtConvHistory.val();
-                        convHistory = convHistory + "You: " + question;
+                        convHistory = convHistory + "You: " + input;
                         convHistory = convHistory + "\n";
                         for (var i = 0; i < result.length; ++i) {
-                            convHistory = convHistory + "ChatBot: " + result[i];
+                            convHistory = convHistory + result[i];
                             convHistory = convHistory + "\n\n";
                         }
                         txtConvHistory.val(convHistory);
                         txtConvHistory.scrollTop(txtConvHistory[0].scrollHeight);
-                        $("#txtQuestion").val("");
+                        $("#txtInput").val("");
                         
                         var speechSyn = $("#chkUseSpeechSyn").is(":checked");
                         if (speechSyn) {
@@ -87,14 +87,14 @@
             $("#btnSay").click(function() {
                 say();
             })
-            $("#txtQuestion").keypress(function(e) {
+            $("#txtInput").keypress(function(e) {
                 var keycode = (e.keyCode ? e.keyCode : e.which);
                 if (keycode == '13'){
                     say();
                 }
             })
             $("#chkUseSpeechRec").change(function(){
-                startButton("txtQuestion", this.checked);
+                startButton("txtInput", this.checked);
             });
         </script>
 
@@ -185,14 +185,14 @@
                     var speechRec = $("#chkUseSpeechRec").is(":checked");
                     if (speechRec) {
                         console.info("stopping rec...");
-                        startButton("txtQuestion", false);
+                        startButton("txtInput", false);
                     }
                 }
                 utterance.onend = function(event) {
                     var speechRec = $("#chkUseSpeechRec").is(":checked");
                     if (speechRec) {
                         console.info("starting rec...");
-                        startButton("txtQuestion", true);
+                        startButton("txtInput", true);
                     }
                 }
 
