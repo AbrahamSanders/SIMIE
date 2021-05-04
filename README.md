@@ -48,7 +48,7 @@ The narrative passages paint a picture of the scene in which the dialog takes pl
 3. The dataset can be found in `data/filtered/en/dialogs.txt`. Additionally, the tool creates a train / validation (dev) / test split of the dialogs which can be found in the same directory, named `train.txt`, `dev.txt`, and `test.txt`.
 
 ## Chat with the pre-trained model: gpt2-xl finetuned on the dataset
-1. Download the model [gpt2-xl-dialog-narrative](https://drive.google.com/file/d/1vnY9CjgZSuuZdOpCUcDc7xhKf48SSHfD/view?usp=sharing) and extract to directory `generator/models/gpt2-xl-dialog-narrative`.
+1. Download the model [gpt2-xl-dialog-narrative](https://drive.google.com/file/d/1HZNn1pFe5Q3Wk1RZDrDaRXSlMDeWjyJ2/view?usp=sharing) and extract to directory `generator/models/gpt2-xl-dialog-narrative`.
 
 2. Run `interact.py`:
    ```
@@ -59,12 +59,14 @@ The narrative passages paint a picture of the scene in which the dialog takes pl
    
    ```
    python interact.py --help
-
+   
    usage: Interact with the generator model [-h] [--modelpath MODELPATH]
-                                            [--force-cpu]
-                                            [--prompt-narrative-prob PROMPT_NARRATIVE_PROB]
-                                            [--max-input-tokens MAX_INPUT_TOKENS]
-                                            [--print-raw] [--speaker-tracking]
+                                          [--force-cpu]
+                                          [--prompt-narrative-prob PROMPT_NARRATIVE_PROB]
+                                          [--max-input-tokens MAX_INPUT_TOKENS]
+                                          [--print-raw] [--speaker-tracking]
+                                          [--num-beams NUM_BEAMS]
+                                          [--show-beams]
 
    optional arguments:
    -h, --help            show this help message and exit
@@ -83,6 +85,9 @@ The narrative passages paint a picture of the scene in which the dialog takes pl
    --print-raw           Print the raw model input and output for debugging
                            purposes.
    --speaker-tracking    Enable speaker tracking through narrative prompts.
+   --num-beams NUM_BEAMS
+                           Number of beams to use for beam search generation.
+   --show-beams          Print all beams when using beam search generation.
    ```
 
    ## Explore examples generated with the pre-trained model:
