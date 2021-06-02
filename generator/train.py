@@ -112,6 +112,7 @@ def add_special_tokens_(model, tokenizer):
         "pad_token": "<|pad|>", 
         "additional_special_tokens": ["<|narrative|>", "<|dialog|>"] })
     if num_added_tokens > 0:
+        logger.info("Resizing token embeddings to add %d additional special tokens...", num_added_tokens)
         model.resize_token_embeddings(len(tokenizer))
 
 class ConversationDataset(Dataset):
